@@ -1,0 +1,15 @@
+# Build output
+dist/
+
+# Dependencies (not used today, but keeps accidents out of history)
+node_modules/
+
+# Editors
+.idea/
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
