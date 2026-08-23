@@ -174,7 +174,7 @@ That separation is why the runtime JS stays tiny, and why disabling JavaScript e
 1. `JSON.parse` `content/content.json`.
 2. Validate: required keys present, every entry in `sections` has matching data, every referenced local asset exists on disk. **Fail loudly** — a typo should break the build, not silently drop your best project.
 3. Render each section to an HTML string with template literals. One small function per section (`renderAbout`, `renderExperience`, …), plus a shared `esc()` helper.
-4. Read `src/index.html` and substitute the `<!--@nav-->`, `<!--@hero-->`, `<!--@main-->`, and `<!--@head-->` markers.
+4. Read `src/index.html` and substitute the `<!--@head-->`, `<!--@hero-->`, `<!--@nav-->`, `<!--@socials-->`, and `<!--@main-->` markers.
 5. Write `dist/index.html`; copy `src/style.css`, `src/main.js`, and `static/` across.
 
 Comment markers are used instead of `{{mustache}}` placeholders so `src/index.html` stays a valid, openable HTML file — you can load it directly in a browser to check the shell's layout without running the build.

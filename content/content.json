@@ -1,0 +1,51 @@
+{
+  "meta": {
+    "name": "Raj Patel",
+    "title": "Software Engineer",
+    "tagline": "I build reliable backends and the tools that keep them honest.",
+    "url": "https://rpatel23.github.io/personal-website/",
+    "description": "Raj Patel — software engineer. Placeholder description; replace with a sentence that reads well as a search result and a link preview.",
+    "themeColor": "#0f172a"
+  },
+
+  "socials": [
+    { "label": "GitHub", "url": "https://github.com/rpatel23", "icon": "github" },
+    { "label": "LinkedIn", "url": "https://www.linkedin.com/in/", "icon": "linkedin" },
+    { "label": "Email", "url": "mailto:rp7.starz@gmail.com", "icon": "mail" }
+  ],
+
+  "sections": ["about", "experience"],
+
+  "about": {
+    "body": [
+      "PLACEHOLDER — replace with your own bio. Two or three short paragraphs works best: what you do now, how you got here, and one line of personality at the end.",
+      "My main focus these days is building resilient systems at <a href=\"https://example.com\">Placeholder Co</a>. Inline <strong>bold</strong>, <em>italic</em>, <code>code</code>, and links are the only markup allowed in this field."
+    ]
+  },
+
+  "experience": [
+    {
+      "start": "2023",
+      "end": "Present",
+      "role": "Senior Software Engineer",
+      "company": "Placeholder Co",
+      "companyUrl": "https://example.com",
+      "priorRoles": ["Software Engineer"],
+      "summary": "PLACEHOLDER — describe scope, impact, and the one number worth remembering. Two sentences is usually the right length.",
+      "tags": ["Go", "Postgres", "Kubernetes", "gRPC"]
+    },
+    {
+      "start": "2021",
+      "end": "2023",
+      "role": "Software Engineer",
+      "company": "Another Placeholder",
+      "companyUrl": "https://example.com",
+      "summary": "PLACEHOLDER — a second entry, so the sibling-dimming hover behavior has something to dim.",
+      "tags": ["TypeScript", "React", "AWS"]
+    }
+  ],
+
+  "footer": {
+    "body": "Built with vanilla HTML, CSS, and JavaScript. Content lives in a single JSON file. Deployed on GitHub Pages."
+  }
+}
