@@ -351,6 +351,8 @@ svg {
   box-shadow: inset 0 1px 0 0 var(--ring), 0 4px 12px -6px rgba(2, 6, 23, 0.6);
 }
 
+.entries--compact .entry { padding-block: 0.5rem; }
+
 @media (min-width: 640px) {
   .entry { grid-template-columns: repeat(12, 1fr); }
 
@@ -358,6 +360,9 @@ svg {
   .entry__thumb { grid-column: span 3; }
 
   .entry__body { grid-column: span 9; }
+
+  /* No thumbnail and no date — let the body use the full width. */
+  .entry--full .entry__body { grid-column: span 12; }
 }
 
 .entry__date {
@@ -370,8 +375,13 @@ svg {
   white-space: nowrap;
 }
 
-.entry__thumb-placeholder {
+/* A fixed aspect ratio reserves the space before the image decodes, so a
+   lazy-loaded thumbnail cannot shift the layout under it. */
+.entry__thumb img {
+  display: block;
+  width: 100%;
   aspect-ratio: 16 / 10;
+  object-fit: cover;
   border: 1px solid var(--ring);
   border-radius: 0.25rem;
   background-color: rgba(30, 41, 59, 0.6);
@@ -397,6 +407,14 @@ svg {
 
 .entry:hover .entry__title a,
 .entry__title a:focus-visible { color: var(--accent); }
+
+.entry__metric {
+  margin-left: 0.5rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
 
 .entry__prior {
   color: var(--muted);

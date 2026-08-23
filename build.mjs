@@ -26,10 +26,17 @@ const ENTITIES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '
 /** Escape a string for interpolation into HTML text or an attribute. */
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ENTITIES[c]);
 
-/** Allow only schemes that can't execute script. Anything else becomes "#". */
+/**
+ * Reject any URL carrying a scheme other than http(s), mailto, or tel — that
+ * blocks javascript: and data: while leaving relative paths ("static/x.png",
+ * "./x", "#anchor") alone, which an allowlist of leading characters did not.
+ */
+const SAFE_SCHEMES = /^(https?|mailto|tel)$/i;
 const href = (value) => {
   const raw = String(value ?? '').trim();
-  return /^(https?:\/\/|mailto:|tel:|[./#])/i.test(raw) ? esc(raw) : '#';
+  const scheme = /^([a-z][a-z0-9+.-]*):/i.exec(raw);
+  if (scheme && !SAFE_SCHEMES.test(scheme[1])) return '#';
+  return esc(raw);
 };
 
 /**
@@ -84,6 +91,16 @@ async function validate(data) {
     req(entry.role, `experience entry missing "role": ${JSON.stringify(entry).slice(0, 60)}`);
     req(entry.company, `experience entry "${entry.role}" is missing "company"`);
     req(entry.start, `experience entry "${entry.role}" is missing "start"`);
+  }
+
+  for (const project of data.projects ?? []) {
+    req(project.name, `project entry missing "name": ${JSON.stringify(project).slice(0, 60)}`);
+    req(project.summary, `project "${project.name}" is missing "summary"`);
+  }
+
+  for (const post of data.writing ?? []) {
+    req(post.title, `writing entry missing "title": ${JSON.stringify(post).slice(0, 60)}`);
+    req(post.year, `writing entry "${post.title}" is missing "year"`);
   }
 
   // Any local asset that is referenced must actually be on disk.
@@ -149,6 +166,59 @@ RENDERERS.experience = (data) => {
   return section('experience', `        <ol class="entries">
 ${entries}
         </ol>${resume}`);
+};
+
+RENDERERS.projects = (data) => {
+  const entries = data.projects.map((project) => {
+    const title = esc(project.name);
+    const link = project.url
+      ? `<a href="${href(project.url)}" rel="noopener noreferrer" target="_blank">${title}</a>`
+      : title;
+
+    // alt="" — the title beside it already names the project, so describing the
+    // thumbnail again would just be repeated in a screen reader.
+    const thumb = project.thumbnail
+      ? `
+            <div class="entry__thumb"><img src="${href(project.thumbnail)}" alt="" loading="lazy" decoding="async"></div>`
+      : '';
+
+    const metric = project.metric
+      ? ` <span class="entry__metric">${esc(project.metric)}</span>`
+      : '';
+
+    return `          <li class="entry${project.thumbnail ? '' : ' entry--full'}">${thumb}
+            <div class="entry__body">
+              <h3 class="entry__title">${link}${metric}</h3>
+              <p class="entry__summary">${esc(project.summary)}</p>${tags(project.tags)}
+            </div>
+          </li>`;
+  }).join('\n');
+
+  return section('projects', `        <ol class="entries">
+${entries}
+        </ol>`);
+};
+
+RENDERERS.writing = (data) => {
+  const entries = data.writing.map((post) => {
+    const title = esc(post.title);
+    const link = post.url
+      ? `<a href="${href(post.url)}" rel="noopener noreferrer" target="_blank">${title}</a>`
+      : title;
+    const publisher = post.publisher
+      ? `\n              <p class="entry__prior">${esc(post.publisher)}</p>`
+      : '';
+    return `          <li class="entry">
+            <div class="entry__date">${esc(post.year)}</div>
+            <div class="entry__body">
+              <h3 class="entry__title">${link}</h3>${publisher}
+            </div>
+          </li>`;
+  }).join('\n');
+
+  return section('writing', `        <ol class="entries entries--compact">
+${entries}
+        </ol>`);
 };
 
 /* ------------------------------------------------------------------ *

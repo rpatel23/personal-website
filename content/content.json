@@ -14,7 +14,7 @@
     { "label": "Email", "url": "mailto:rp7.starz@gmail.com", "icon": "mail" }
   ],
 
-  "sections": ["about", "experience"],
+  "sections": ["about", "experience", "projects", "writing"],
 
   "about": {
     "body": [
@@ -42,6 +42,37 @@
       "companyUrl": "https://example.com",
       "summary": "PLACEHOLDER — a second entry, so the sibling-dimming hover behavior has something to dim.",
       "tags": ["TypeScript", "React", "AWS"]
+    }
+  ],
+
+  "projects": [
+    {
+      "name": "Placeholder Project",
+      "url": "https://github.com/rpatel23",
+      "summary": "PLACEHOLDER — one or two sentences on what it does and why it exists. Add \"thumbnail\": \"static/projects/name.png\" to give it an image; the file must exist or the build fails.",
+      "metric": "1.2k stars",
+      "tags": ["Rust", "SQLite"]
+    },
+    {
+      "name": "Another Placeholder Project",
+      "url": "https://github.com/rpatel23",
+      "summary": "PLACEHOLDER — a second entry, so the sibling-dimming hover behavior has something to dim here too.",
+      "tags": ["Python", "Docker"]
+    }
+  ],
+
+  "writing": [
+    {
+      "year": "2025",
+      "title": "PLACEHOLDER — a post title",
+      "url": "https://example.com",
+      "publisher": "Personal blog"
+    },
+    {
+      "year": "2024",
+      "title": "PLACEHOLDER — another post title",
+      "url": "https://example.com",
+      "publisher": "Some Publication"
     }
   ],
 
