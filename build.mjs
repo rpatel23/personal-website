@@ -74,7 +74,7 @@ const RENDERERS = {};   // populated below; also doubles as the set of known sec
  */
 const PALETTE = {
   ink:   { bg: '#fdfdfc', accent: '#1f4e79', heading: '#10141a', text: '#4a5568', muted: '#66707f' },
-  paper: { bg: '#fdfcf8', accent: '#8c2f2f', heading: '#1c1a17', text: '#4a4540', muted: '#706859' },
+  paper: { bg: '#faf6ec', accent: '#8c2f2f', heading: '#1c1a17', text: '#4a4540', muted: '#706859' },
   sage:  { bg: '#fbfbf9', accent: '#3f6b52', heading: '#191d1a', text: '#4b544c', muted: '#69736a' },
 };
 const PALETTES = Object.keys(PALETTE);

@@ -240,9 +240,9 @@ The register is a faculty or research-group page: light ground, serif type, hair
 
 | | `ink` (default) | `paper` | `sage` |
 |---|---|---|---|
-| ground | `#fdfdfc` | `#fdfcf8` | `#fbfbf9` |
-| hovered row | `#f4f6f8` | `#f5f2ea` | `#f1f4f0` |
-| hairline | `#e4e8ec` | `#e6e0d3` | `#e0e5df` |
+| ground | `#fdfdfc` | `#faf6ec` | `#fbfbf9` |
+| hovered row | `#f4f6f8` | `#f2ebda` | `#f1f4f0` |
+| hairline | `#e4e8ec` | `#e6dcc6` | `#e0e5df` |
 | body text | `#4a5568` | `#4a4540` | `#4b544c` |
 | muted | `#66707f` | `#706859` | `#69736a` |
 | heading | `#10141a` | `#1c1a17` | `#191d1a` |
@@ -291,7 +291,7 @@ Treated as part of the design, not a later pass:
   | | body text | muted | heading | accent |
   |---|---|---|---|---|
   | `ink` | 7.39 | 4.93 | 18.15 | 8.51 |
-  | `paper` | 9.23 | 5.36 | 16.91 | 7.98 |
+  | `paper` | 8.78 | 5.10 | 16.09 | 7.59 |
   | `sage` | 7.59 | 4.76 | 16.45 | 5.90 |
 
   Re-run the check if you change a token — muted is the role with the least headroom.
@@ -400,4 +400,3 @@ Phases 1–2 produce something genuinely presentable; everything after is refine
 - **Writing section.** Include it only if there is something to list — an empty section reads worse than a missing one. Omitting it from `sections` removes it cleanly.
 - **Analytics.** None by default. If wanted later, prefer a lightweight cookieless option over Google Analytics; it is one script tag and a line in the budget table.
 - **Resume PDF.** Not yet supplied. Also whether to link it in the left rail alongside the socials, or as a button under the tagline. Rail is tidier; button gets more clicks.
-- **`paper` palette warmth.** Its ground (`#fdfcf8`) is barely distinguishable from `ink`'s in practice, so it reads as "white with a red accent" rather than as paper. Pushing it to roughly `#faf6ec`, with the hairlines warmed to match, would earn the name.

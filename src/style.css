@@ -21,9 +21,9 @@
 }
 
 [data-palette='paper'] {
-  --bg:          #fdfcf8;
-  --surface:     #f5f2ea;
-  --rule:        #e6e0d3;
+  --bg:          #faf6ec;   /* warm cream — the ground has to carry the name */
+  --surface:     #f2ebda;
+  --rule:        #e6dcc6;
   --text:        #4a4540;
   --muted:       #706859;
   --heading:     #1c1a17;
