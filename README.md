@@ -202,21 +202,19 @@ Two brand assets are produced by `build.mjs` rather than committed, so they cann
 
 Switch `theme.palette` and both regenerate in the accent of the new palette on the next build.
 
-**The PNG is the exception.** Social scrapers — Open Graph, Twitter, LinkedIn, iMessage — do not accept SVG, and rasterising needs a font renderer, which a dependency-free Node script does not have. So `static/og-image.png` is committed. To refresh it after changing your name, tagline, or palette, build, serve `dist/`, and run this in the browser console on the page:
+**The PNG regenerates too**, with one caveat. Social scrapers reject SVG, and Node has no font renderer — so `build.mjs` shells out to headless Chrome (or Edge) to rasterise the card. That is an external binary, not an npm dependency: nothing is installed, and its absence is not fatal.
 
-```js
-const svg = await fetch('og-image.svg').then(r => r.text());
-const img = new Image();
-img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
-await img.decode();
-const c = Object.assign(document.createElement('canvas'), { width: 1200, height: 630 });
-c.getContext('2d').drawImage(img, 0, 0, 1200, 630);
-c.toBlob(b => Object.assign(document.createElement('a'), {
-  href: URL.createObjectURL(b), download: 'og-image.png'
-}).click());
-```
+The result is committed at `static/og-image.png` and keyed to a hash of the SVG in `static/.og-image.hash` (gitignored), so:
 
-Any SVG-to-PNG converter at 1200×630 works equally well. If you skip this, the card simply goes stale — nothing breaks, and `twitter:card` falls back to `summary` when `meta.ogImage` is unset.
+- Change your name, tagline, or palette → the hash moves, the card re-renders, and the build prints `og-image rendered`.
+- Change nothing → `og-image cached`, and no browser is launched.
+- No browser, or the render fails → the build prints a warning, keeps the committed PNG, and **leaves the stamp unset** so the next build with a browser present retries. Prints `og-image stale`.
+
+Set `CHROME_PATH` if your browser lives somewhere unusual. Rendering is deterministic — returning to a previous palette reproduces a byte-identical PNG.
+
+Because the PNG is committed, a CI runner without a browser still deploys the correct card, as long as you committed it after your last content change. The build tells you which of the three states you are in on every run.
+
+If you would rather not rely on a browser at all, any SVG-to-PNG converter pointed at `dist/og-image.svg` at 1200×630 produces the same thing.
 
 ---
 

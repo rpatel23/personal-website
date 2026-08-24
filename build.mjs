@@ -7,9 +7,12 @@
  */
 
 import { readFile, writeFile, mkdir, readdir, rm, cp, stat } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
+import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
 const SRC = join(ROOT, 'src');
@@ -365,19 +368,122 @@ const renderFooter = (footer) =>
       </footer>`;
 
 /* ------------------------------------------------------------------ *
- * Build
+ * Link-preview PNG
  * ------------------------------------------------------------------ */
 
 /** Short content hash, appended as ?v= for cache busting. */
 const fingerprint = (buffer) => createHash('sha256').update(buffer).digest('hex').slice(0, 8);
 
+const OG_PNG = join(STATIC, 'og-image.png');
+const OG_STAMP = join(STATIC, '.og-image.hash');
+
+/**
+ * Locate a Chromium-family browser. This is an external binary, not an npm
+ * dependency — nothing is installed, and its absence is not fatal.
+ */
+function findBrowser() {
+  if (process.env.CHROME_PATH && existsSync(process.env.CHROME_PATH)) return process.env.CHROME_PATH;
+
+  const paths = {
+    win32: [
+      'C:/Program Files/Google/Chrome/Application/chrome.exe',
+      'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe',
+      join(process.env.LOCALAPPDATA ?? '', 'Google/Chrome/Application/chrome.exe'),
+      'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
+      'C:/Program Files/Microsoft/Edge/Application/msedge.exe',
+    ],
+    darwin: [
+      '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+      '/Applications/Chromium.app/Contents/MacOS/Chromium',
+      '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge',
+    ],
+  }[process.platform] ?? [];
+
+  for (const path of paths) if (path && existsSync(path)) return path;
+
+  // Linux and anything else: fall back to whatever is on PATH.
+  for (const name of ['google-chrome', 'google-chrome-stable', 'chromium', 'chromium-browser']) {
+    try {
+      const found = execFileSync('which', [name], { encoding: 'utf8' }).trim();
+      if (found) return found;
+    } catch { /* not on PATH */ }
+  }
+  return null;
+}
+
+/**
+ * Rasterise the card to static/og-image.png. Social scrapers reject SVG, and
+ * Node has no font renderer, so this shells out to headless Chrome.
+ *
+ * The PNG is committed and keyed to a hash of the SVG, so this only runs when
+ * the card actually changed. That keeps a machine without a browser — CI, a
+ * fresh clone — building fine against the committed copy.
+ */
+async function refreshOgPng(svg) {
+  const want = fingerprint(Buffer.from(svg));
+  const have = await readFile(OG_STAMP, 'utf8').catch(() => null);
+  if (have?.trim() === want && existsSync(OG_PNG)) return 'cached';
+
+  const browser = findBrowser();
+  if (!browser) {
+    console.warn(
+      `  ! og-image.png is out of date and no Chrome/Edge was found to re-render it.\n` +
+      `    The committed PNG still ships; set CHROME_PATH, or see the README for the\n` +
+      `    browser snippet that regenerates it by hand.`
+    );
+    return 'stale';
+  }
+
+  const page = join(tmpdir(), `og-${want}.html`);
+  await writeFile(page, `<!doctype html><meta charset="utf-8">` +
+    `<style>html,body{margin:0;padding:0;overflow:hidden}svg{display:block}</style>${svg}`);
+  await mkdir(STATIC, { recursive: true });
+
+  const run = (headless) => execFileSync(browser, [
+    headless, '--disable-gpu', '--hide-scrollbars', '--force-device-scale-factor=1',
+    `--screenshot=${OG_PNG}`, '--window-size=1200,630', pathToFileURL(page).href,
+  ], { stdio: 'ignore', timeout: 60_000 });
+
+  try {
+    try { run('--headless=new'); }
+    catch { run('--headless'); }   // Chrome < 112
+  } catch (err) {
+    console.warn(`  ! could not render og-image.png (${err.code ?? err.message}); keeping the committed copy`);
+    return 'stale';
+  }
+
+  // Trust nothing: confirm it really is a 1200x630 PNG before stamping it good.
+  const png = await readFile(OG_PNG).catch(() => null);
+  const ok = png
+    && png.subarray(0, 8).toString('hex') === '89504e470d0a1a0a'
+    && png.readUInt32BE(16) === 1200
+    && png.readUInt32BE(20) === 630;
+  if (!ok) {
+    console.warn('  ! rendered og-image.png failed validation; leaving the stamp unset');
+    return 'stale';
+  }
+
+  await writeFile(OG_STAMP, want + '\n');
+  return 'rendered';
+}
+
+/* ------------------------------------------------------------------ *
+ * Build
+ * ------------------------------------------------------------------ */
+
 async function build() {
   const data = JSON.parse(await readFile(CONTENT, 'utf8'));
+  const { palette = 'ink', type = 'serif' } = data.theme ?? {};
+
+  // Refresh the PNG before validating, since validation checks that every
+  // referenced asset is on disk and meta.ogImage points at this file. Skipped
+  // when the palette name is bad — validate() reports that properly below.
+  const ogSvg = PALETTE[palette] ? renderOgCard(data.meta, palette) : null;
+  const ogState = ogSvg ? await refreshOgPng(ogSvg) : 'skipped';
+
   await validate(data);
 
   const main = data.sections.map((id) => RENDERERS[id](data)).join('\n') + renderFooter(data.footer);
-
-  const { palette = 'ink', type = 'serif' } = data.theme ?? {};
 
   let html = await readFile(join(SRC, 'index.html'), 'utf8');
   html = html
@@ -404,7 +510,7 @@ async function build() {
     html = html.replaceAll(`"${asset}"`, `"${asset}?v=${fingerprint(buffer)}"`);
   }
 
-  await writeFile(join(OUT, 'og-image.svg'), renderOgCard(data.meta, palette));
+  await writeFile(join(OUT, 'og-image.svg'), ogSvg);
 
   const favicon = renderFavicon(data.meta, palette);
   await writeFile(join(OUT, 'favicon.svg'), favicon);
@@ -415,7 +521,7 @@ async function build() {
   await writeFile(join(OUT, 'index.html'), html);
 
   const kb = (n) => `${(n / 1024).toFixed(1)} KB`;
-  console.log(`built dist/index.html  ${kb(Buffer.byteLength(html))}  (${data.sections.length} sections)`);
+  console.log(`built dist/index.html  ${kb(Buffer.byteLength(html))}  (${data.sections.length} sections, og-image ${ogState})`);
 }
 
 build().catch((err) => {
