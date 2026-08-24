@@ -37,7 +37,7 @@ The guiding constraint: **the frontend is hand-written HTML/CSS/JS, and the "bac
 
 - A CMS, an admin UI, or a database. The "configuration of content" is a text file in git.
 - Multiple pages, routing, or a blog. If a blog gets added later, that is the moment to reconsider Astro.
-- Client-side framework interactivity. There is exactly one behavior — the scroll-spy nav — in ~25 lines of vanilla JS.
+- Client-side framework interactivity. There is exactly one behavior — the scroll-spy nav — in ~70 lines of vanilla JS.
 
 ---
 
@@ -67,7 +67,7 @@ personal-website/
 ├── src/
 │   ├── index.html            # shell with <!--@slot--> markers
 │   ├── style.css             # ~500 lines; palettes + type as custom properties
-│   └── main.js               # ~25 lines: scroll-spy only
+│   └── main.js               # ~70 lines: scroll-spy nav only
 ├── static/
 │   ├── resume.pdf
 │   ├── og-image.png          # 1200×630 link-preview card
@@ -194,11 +194,13 @@ The `<!--@head-->` slot receives a generated `<title>`, `<meta name="description
 
 ## Runtime JavaScript
 
-`src/main.js` does exactly one thing: an `IntersectionObserver` over the section elements sets `aria-current="true"` on the matching left-rail link. The active-state styling is pure CSS keyed off that attribute — no class juggling.
+`src/main.js` does exactly one thing: it marks the nav link for whichever section you are reading with `aria-current="true"`. All the active styling hangs off that attribute in CSS, so this file never touches classes or content.
 
-Dropping the cursor spotlight removed the only motion worth guarding, so there is no `prefers-reduced-motion` branch in JS; the reduced-motion media query in the stylesheet handles the rest.
+**Why a scroll listener rather than an `IntersectionObserver`.** An observer tells you *that* a boundary was crossed, not *which* section you are in, and it cannot answer the page-bottom case at all: a short final section may never reach the activation band, so the last nav item would never light up. The implementation instead measures on scroll — the last section whose top has passed a line 30% down the viewport wins, with an explicit guard that hands the bottom of the page to the final section.
 
-No polyfills, no feature detection. If JS fails to load, the page is fully readable and every link works; you lose a nav highlight.
+It runs straight from a passive listener with no `requestAnimationFrame` coalescing. Browsers already fire `scroll` at most once per frame, measuring four elements is cheap, and depending on rAF means the nav goes stale whenever rAF is paused — as it is in any background tab.
+
+Without the script the first link stays marked (`build.mjs` renders it that way), which is a reasonable no-JS default. The page is fully readable and every link works; you lose a highlight.
 
 ---
 
