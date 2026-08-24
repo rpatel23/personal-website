@@ -424,6 +424,20 @@ async function refreshOgPng(svg) {
   const have = await readFile(OG_STAMP, 'utf8').catch(() => null);
   if (have?.trim() === want && existsSync(OG_PNG)) return 'cached';
 
+  // Never rasterise on CI. Runners lack the fonts this card is designed
+  // against — Georgia and Palatino are Windows/macOS — so a re-render there
+  // would silently ship a card in a different typeface than the one reviewed.
+  // The committed PNG is authoritative; a stale one is better than a wrong one.
+  if (process.env.CI) {
+    console.warn(
+      `  ! og-image.png does not match the current content.\n` +
+      `    CI does not re-render it (fonts differ from your machine), so the\n` +
+      `    committed PNG ships as-is. Run the build locally and commit both\n` +
+      `    static/og-image.png and static/.og-image.hash to refresh it.`
+    );
+    return 'stale';
+  }
+
   const browser = findBrowser();
   if (!browser) {
     console.warn(

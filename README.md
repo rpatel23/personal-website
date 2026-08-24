@@ -318,42 +318,11 @@ No render-blocking third parties, no analytics by default, and — because no we
 
 ## Deployment
 
-GitHub Pages via Actions. `.github/workflows/deploy.yml` runs `node build.mjs` on push to `main` and publishes `dist/`.
+The workflow lives at `.github/workflows/deploy.yml`. It runs `node build.mjs` on every push to `main`, sanity-checks the output, and publishes `dist/`. No `npm install` — there is nothing to install.
 
-```yaml
-name: Deploy
-on:
-  push: { branches: [main] }
-  workflow_dispatch:
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-concurrency:
-  group: pages
-  cancel-in-progress: true
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: '22' }
-      - run: node build.mjs
-      - uses: actions/upload-pages-artifact@v3
-        with: { path: dist }
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: PAGE_URL_OUTPUT
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
-```
+**One-time setup:** repo *Settings → Pages → Source: **GitHub Actions***. Without that the workflow runs green but nothing is published.
 
-> Replace `PAGE_URL_OUTPUT` with the Actions expression `${{ steps.deployment.outputs.page_url }}` when creating the real workflow file — it is written as a placeholder here only so this README renders cleanly.
+**CI never re-renders the link-preview PNG.** Runners lack Georgia and Palatino, so a re-render there would ship a card in a different typeface than the one you reviewed. `build.mjs` detects `CI` and skips it, shipping the committed PNG instead. That is why `static/.og-image.hash` is committed alongside the PNG — it is the cache key, and without it every CI build would see a mismatch. Refresh both locally and commit them together; CI prints a warning if they are out of date.
 
 **Base path — read this before the first deploy.** This repo is `rpatel23/personal-website`, so Pages serves it from `https://rpatel23.github.io/personal-website/`, a subpath. Every asset reference must therefore be **relative** (`assets/style.css`, not `/assets/style.css`). Root-absolute paths are the single most common cause of "works locally, blank page on Pages."
 

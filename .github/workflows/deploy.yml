@@ -1,0 +1,54 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Least privilege: read the repo, publish Pages, mint the OIDC token deploy-pages needs.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never let two deploys race. Queue rather than cancel, so a push mid-deploy
+# still ships instead of being dropped.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          # No cache: key omitted deliberately — there is no lockfile and no
+          # node_modules to restore.
+
+      - name: Build
+        run: node build.mjs
+
+      - name: Check the build produced something real
+        run: |
+          test -s dist/index.html || { echo "dist/index.html missing or empty"; exit 1; }
+          grep -q '<main' dist/index.html   || { echo "no <main> in output"; exit 1; }
+          grep -q 'entry__title' dist/index.html || { echo "no entries rendered"; exit 1; }
+          echo "dist/index.html $(stat -c%s dist/index.html) bytes"
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
