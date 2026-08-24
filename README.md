@@ -69,12 +69,13 @@ personal-website/
 │   ├── style.css             # ~500 lines; palettes + type as custom properties
 │   └── main.js               # ~70 lines: scroll-spy nav only
 ├── static/
-│   ├── resume.pdf
-│   ├── og-image.png          # 1200×630 link-preview card
-│   ├── favicon.svg
+│   ├── og-image.png          # 1200×630 link-preview card (rasterised, committed)
+│   ├── resume.pdf            # you supply this
 │   └── projects/*.png        # project thumbnails
 ├── build.mjs                 # ~60 lines, Node stdlib only
 ├── dist/                     # generated; gitignored; deployed
+│   ├── favicon.svg           #   generated from the palette
+│   └── og-image.svg          #   generated; source for the PNG above
 └── .github/workflows/deploy.yml
 ```
 
@@ -192,6 +193,33 @@ The `<!--@head-->` slot receives a generated `<title>`, `<meta name="description
 
 ---
 
+## Generated assets
+
+Two brand assets are produced by `build.mjs` rather than committed, so they cannot drift from the palette:
+
+- **`favicon.svg`** — a rounded square in the accent colour with the first initial of `meta.name`. At 16px anything more detailed turns to mud. Linked from `<head>` with a content hash.
+- **`og-image.svg`** — the 1200×630 link-preview card, drawn from the same tokens: accent rule along the top, name, accent hairline, italic title, wrapped tagline, bare URL in letterspaced caps, and the monogram at the right.
+
+Switch `theme.palette` and both regenerate in the accent of the new palette on the next build.
+
+**The PNG is the exception.** Social scrapers — Open Graph, Twitter, LinkedIn, iMessage — do not accept SVG, and rasterising needs a font renderer, which a dependency-free Node script does not have. So `static/og-image.png` is committed. To refresh it after changing your name, tagline, or palette, build, serve `dist/`, and run this in the browser console on the page:
+
+```js
+const svg = await fetch('og-image.svg').then(r => r.text());
+const img = new Image();
+img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+await img.decode();
+const c = Object.assign(document.createElement('canvas'), { width: 1200, height: 630 });
+c.getContext('2d').drawImage(img, 0, 0, 1200, 630);
+c.toBlob(b => Object.assign(document.createElement('a'), {
+  href: URL.createObjectURL(b), download: 'og-image.png'
+}).click());
+```
+
+Any SVG-to-PNG converter at 1200×630 works equally well. If you skip this, the card simply goes stale — nothing breaks, and `twitter:card` falls back to `summary` when `meta.ogImage` is unset.
+
+---
+
 ## Runtime JavaScript
 
 `src/main.js` does exactly one thing: it marks the nav link for whichever section you are reading with `aria-current="true"`. All the active styling hangs off that attribute in CSS, so this file never touches classes or content.
@@ -273,13 +301,18 @@ Treated as part of the design, not a later pass:
 
 ## Performance budget
 
-| Asset | Budget |
-|---|---|
-| `index.html` (content inlined) | ≤ 25 KB |
-| `style.css` | ≤ 14 KB raw (**3.3 KB gzipped** today) |
-| `main.js` | ≤ 3 KB |
-| Web fonts | **0 KB** — system serif stack |
-| **Total, first view** | **≤ 25 KB raw** |
+Measured, not aspirational:
+
+| Asset | Raw | Gzipped |
+|---|---|---|
+| `index.html` (content inlined) | 8.4 KB | 2.4 KB |
+| `style.css` | 12.6 KB | 3.3 KB |
+| `main.js` | 2.2 KB | 1.0 KB |
+| `favicon.svg` | 0.3 KB | 0.3 KB |
+| Web fonts | **0 KB** | — |
+| **Total, first view** | 23.5 KB | **6.8 KB** |
+
+`static/og-image.png` is 71 KB but never touches this budget — only link scrapers fetch it, never a visitor.
 
 No render-blocking third parties, no analytics by default, and — because no web font is loaded — no swap flash at all. Carrying three palettes and three type stacks costs about 2 KB raw over a single hardcoded theme, and almost nothing after compression; gzip is what the budget should be judged on. Project thumbnails are lazy-loaded with explicit `width`/`height` to prevent layout shift. The target is 100/100/100/100 on Lighthouse — realistic at this size, and worth treating as a regression check rather than a vanity metric.
 
@@ -352,7 +385,9 @@ Optionally add a watch mode later using `node:fs.watch` on `content/` and `src/`
 2. **Content pipeline** — write `content.json` with real data, write `build.mjs`, replace the hardcoded text with generated markup. Sections in place: about, experience.
 3. **Remaining sections** — projects, writing, footer. Tag pills, thumbnails.
 4. **Behavior** — `main.js`: the scroll-spy nav.
-5. **Polish** — OG image, favicon, résumé PDF, optional subset Source Serif in front of the system stack, Lighthouse pass. (`<head>` generation, JSON-LD and the contrast audit landed early.)
+5. **Polish** — done, except two items that are deliberately outstanding:
+   - **`static/resume.pdf`** — yours to supply. Drop it in and add `"resume": "static/resume.pdf"` to `meta`; a "View Full Résumé" link then appears under Experience. Referenced-but-missing assets fail the build, so a typo here is caught.
+   - **Subset Source Serif** — deferred, not forgotten. The system stack (Georgia/Palatino) already renders the intended design at zero bytes, and a web font would add ~30 KB and a swap flash to fix something that is not broken. Put it at the front of `--font-heading` if you ever want the exact cut.
 6. **Ship** — workflow file, first deploy, then decide on the repo rename or custom domain.
 
 Phases 1–2 produce something genuinely presentable; everything after is refinement.
@@ -364,4 +399,5 @@ Phases 1–2 produce something genuinely presentable; everything after is refine
 - **Repo rename vs. custom domain vs. subpath.** Affects only asset paths, and relative paths keep all three open. Decide before sharing the URL anywhere, since a rename changes the link.
 - **Writing section.** Include it only if there is something to list — an empty section reads worse than a missing one. Omitting it from `sections` removes it cleanly.
 - **Analytics.** None by default. If wanted later, prefer a lightweight cookieless option over Google Analytics; it is one script tag and a line in the budget table.
-- **Resume PDF.** Whether to link it in the left rail alongside the socials, or as a button under the tagline. Rail is tidier; button gets more clicks.
+- **Resume PDF.** Not yet supplied. Also whether to link it in the left rail alongside the socials, or as a button under the tagline. Rail is tidier; button gets more clicks.
+- **`paper` palette warmth.** Its ground (`#fdfcf8`) is barely distinguishable from `ink`'s in practice, so it reads as "white with a red accent" rather than as paper. Pushing it to roughly `#faf6ec`, with the hairlines warmed to match, would earn the name.

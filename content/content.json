@@ -4,29 +4,42 @@
     "title": "Software Engineer",
     "tagline": "I build reliable backends and the tools that keep them honest.",
     "url": "https://rpatel23.github.io/personal-website/",
-    "description": "Raj Patel — software engineer. Placeholder description; replace with a sentence that reads well as a search result and a link preview."
+    "description": "Raj Patel — software engineer. Placeholder description; replace with a sentence that reads well as a search result and a link preview.",
+    "ogImage": "static/og-image.png"
   },
-
   "theme": {
-    "palette": "ink",
+    "palette": "paper",
     "type": "serif"
   },
-
   "socials": [
-    { "label": "GitHub", "url": "https://github.com/rpatel23", "icon": "github" },
-    { "label": "LinkedIn", "url": "https://www.linkedin.com/in/", "icon": "linkedin" },
-    { "label": "Email", "url": "mailto:rp7.starz@gmail.com", "icon": "mail" }
+    {
+      "label": "GitHub",
+      "url": "https://github.com/rpatel23",
+      "icon": "github"
+    },
+    {
+      "label": "LinkedIn",
+      "url": "https://www.linkedin.com/in/",
+      "icon": "linkedin"
+    },
+    {
+      "label": "Email",
+      "url": "mailto:rp7.starz@gmail.com",
+      "icon": "mail"
+    }
   ],
-
-  "sections": ["about", "experience", "projects", "writing"],
-
+  "sections": [
+    "about",
+    "experience",
+    "projects",
+    "writing"
+  ],
   "about": {
     "body": [
       "PLACEHOLDER — replace with your own bio. Two or three short paragraphs works best: what you do now, how you got here, and one line of personality at the end.",
       "My main focus these days is building resilient systems at <a href=\"https://example.com\">Placeholder Co</a>. Inline <strong>bold</strong>, <em>italic</em>, <code>code</code>, and links are the only markup allowed in this field."
     ]
   },
-
   "experience": [
     {
       "start": "2023",
@@ -34,9 +47,16 @@
       "role": "Senior Software Engineer",
       "company": "Placeholder Co",
       "companyUrl": "https://example.com",
-      "priorRoles": ["Software Engineer"],
+      "priorRoles": [
+        "Software Engineer"
+      ],
       "summary": "PLACEHOLDER — describe scope, impact, and the one number worth remembering. Two sentences is usually the right length.",
-      "tags": ["Go", "Postgres", "Kubernetes", "gRPC"]
+      "tags": [
+        "Go",
+        "Postgres",
+        "Kubernetes",
+        "gRPC"
+      ]
     },
     {
       "start": "2021",
@@ -45,26 +65,34 @@
       "company": "Another Placeholder",
       "companyUrl": "https://example.com",
       "summary": "PLACEHOLDER — a second entry, so the sibling-dimming hover behavior has something to dim.",
-      "tags": ["TypeScript", "React", "AWS"]
+      "tags": [
+        "TypeScript",
+        "React",
+        "AWS"
+      ]
     }
   ],
-
   "projects": [
     {
       "name": "Placeholder Project",
       "url": "https://github.com/rpatel23",
       "summary": "PLACEHOLDER — one or two sentences on what it does and why it exists. Add \"thumbnail\": \"static/projects/name.png\" to give it an image; the file must exist or the build fails.",
       "metric": "1.2k stars",
-      "tags": ["Rust", "SQLite"]
+      "tags": [
+        "Rust",
+        "SQLite"
+      ]
     },
     {
       "name": "Another Placeholder Project",
       "url": "https://github.com/rpatel23",
       "summary": "PLACEHOLDER — a second entry, so the sibling-dimming hover behavior has something to dim here too.",
-      "tags": ["Python", "Docker"]
+      "tags": [
+        "Python",
+        "Docker"
+      ]
     }
   ],
-
   "writing": [
     {
       "year": "2025",
@@ -79,7 +107,6 @@
       "publisher": "Some Publication"
     }
   ],
-
   "footer": {
     "body": "Built with vanilla HTML, CSS, and JavaScript. Content lives in a single JSON file. Deployed on GitHub Pages."
   }

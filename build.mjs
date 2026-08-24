@@ -67,11 +67,17 @@ const rich = (value) => {
 
 const RENDERERS = {};   // populated below; also doubles as the set of known sections
 
-// Must stay in step with the [data-palette] / [data-type] blocks in style.css.
-const PALETTES = ['ink', 'paper', 'sage'];
-// Ground colour per palette, used for <meta name="theme-color"> when meta.themeColor
-// is unset, so the browser chrome matches whichever palette is active.
-const PALETTE_BG = { ink: '#fdfdfc', paper: '#fdfcf8', sage: '#fbfbf9' };
+/**
+ * Must stay in step with the [data-palette] blocks in style.css. Duplicated
+ * here because the generated assets — favicon, link-preview card, theme-color —
+ * are produced outside the stylesheet and still have to match it.
+ */
+const PALETTE = {
+  ink:   { bg: '#fdfdfc', accent: '#1f4e79', heading: '#10141a', text: '#4a5568', muted: '#66707f' },
+  paper: { bg: '#fdfcf8', accent: '#8c2f2f', heading: '#1c1a17', text: '#4a4540', muted: '#706859' },
+  sage:  { bg: '#fbfbf9', accent: '#3f6b52', heading: '#191d1a', text: '#4b544c', muted: '#69736a' },
+};
+const PALETTES = Object.keys(PALETTE);
 const TYPES = ['serif', 'hybrid', 'sans'];
 
 async function exists(path) {
@@ -246,7 +252,63 @@ const ICONS = {
   codepen: '<polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/><line x1="12" y1="22" x2="12" y2="15.5"/><polyline points="22 8.5 12 15.5 2 8.5"/><polyline points="2 15.5 12 8.5 22 15.5"/><line x1="12" y1="2" x2="12" y2="8.5"/>',
 };
 
+/**
+ * Monogram favicon, generated rather than committed so it follows the palette.
+ * Kept to a rounded square plus one initial: at 16px anything more is mud.
+ */
+const renderFavicon = (meta, palette) => {
+  const P = PALETTE[palette];
+  const initial = esc([...String(meta.name).trim()][0] ?? '?').toUpperCase();
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="${esc(meta.name)}">
+  <rect width="64" height="64" rx="13" fill="${P.accent}"/>
+  <text x="32" y="46" text-anchor="middle" fill="${P.bg}"
+        font-family="Georgia, 'Times New Roman', serif" font-size="42" font-weight="600">${initial}</text>
+</svg>
+`;
+};
+
+/** Greedy line-wrap; SVG <text> has no automatic wrapping. */
+const wrap = (text, max) => {
+  const lines = [];
+  let line = '';
+  for (const word of String(text).split(/\s+/)) {
+    if (line && (line + ' ' + word).length > max) { lines.push(line); line = word; }
+    else line = line ? line + ' ' + word : word;
+  }
+  if (line) lines.push(line);
+  return lines;
+};
+
+/**
+ * 1200x630 link-preview card, generated from the same tokens as the page.
+ * Emitted as SVG; see tools/ for turning it into the PNG social scrapers want.
+ */
+const renderOgCard = (meta, palette) => {
+  const P = PALETTE[palette];
+  const serif = "Georgia, 'Times New Roman', serif";
+  const tagline = wrap(meta.tagline ?? '', 52).slice(0, 3);
+  const initial = esc([...String(meta.name).trim()][0] ?? '?').toUpperCase();
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="${P.bg}"/>
+  <rect x="0" y="0" width="1200" height="10" fill="${P.accent}"/>
+  <g font-family="${serif}">
+    <text x="90" y="230" font-size="86" font-weight="600" fill="${P.heading}">${esc(meta.name)}</text>
+    <line x1="90" y1="272" x2="470" y2="272" stroke="${P.accent}" stroke-width="2"/>
+    <text x="90" y="330" font-size="38" font-style="italic" fill="${P.accent}">${esc(meta.title)}</text>
+${tagline.map((l, i) => `    <text x="90" y="${412 + i * 46}" font-size="32" fill="${P.text}">${esc(l)}</text>`).join('\n')}
+    <text x="90" y="566" font-size="22" letter-spacing="3" fill="${P.muted}">${esc((meta.url ?? '').replace(/^https?:\/\//, '').replace(/\/$/, '')).toUpperCase()}</text>
+  </g>
+  <g transform="translate(950 90)">
+    <rect width="160" height="160" rx="32" fill="${P.accent}"/>
+    <text x="80" y="118" text-anchor="middle" font-family="${serif}" font-size="104" font-weight="600" fill="${P.bg}">${initial}</text>
+  </g>
+</svg>
+`;
+};
+
 const renderHead = (meta, palette) => {
+  const P = PALETTE[palette];
   const jsonLd = JSON.stringify({
     '@context': 'https://schema.org',
     '@type': 'Person',
@@ -260,8 +322,9 @@ const renderHead = (meta, palette) => {
   const image = meta.ogImage ? `\n  <meta property="og:image" content="${esc(abs(meta.ogImage))}">` : '';
 
   return `  <title>${esc(meta.name)} — ${esc(meta.title)}</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <meta name="description" content="${esc(meta.description)}">
-  <meta name="theme-color" content="${esc(meta.themeColor ?? PALETTE_BG[palette] ?? '#ffffff')}">
+  <meta name="theme-color" content="${esc(meta.themeColor ?? P.bg ?? '#ffffff')}">
   <meta property="og:type" content="profile">
   <meta property="og:title" content="${esc(meta.name)} — ${esc(meta.title)}">
   <meta property="og:description" content="${esc(meta.description)}">${image}${meta.url ? `
@@ -340,6 +403,12 @@ async function build() {
     await writeFile(join(OUT, asset), buffer);
     html = html.replaceAll(`"${asset}"`, `"${asset}?v=${fingerprint(buffer)}"`);
   }
+
+  await writeFile(join(OUT, 'og-image.svg'), renderOgCard(data.meta, palette));
+
+  const favicon = renderFavicon(data.meta, palette);
+  await writeFile(join(OUT, 'favicon.svg'), favicon);
+  html = html.replace('"favicon.svg"', `"favicon.svg?v=${fingerprint(Buffer.from(favicon))}"`);
 
   if (await exists(STATIC)) await cp(STATIC, join(OUT, 'static'), { recursive: true });
 
