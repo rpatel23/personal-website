@@ -4,8 +4,12 @@
     "title": "Software Engineer",
     "tagline": "I build reliable backends and the tools that keep them honest.",
     "url": "https://rpatel23.github.io/personal-website/",
-    "description": "Raj Patel — software engineer. Placeholder description; replace with a sentence that reads well as a search result and a link preview.",
-    "themeColor": "#0f172a"
+    "description": "Raj Patel — software engineer. Placeholder description; replace with a sentence that reads well as a search result and a link preview."
+  },
+
+  "theme": {
+    "palette": "ink",
+    "type": "serif"
   },
 
   "socials": [

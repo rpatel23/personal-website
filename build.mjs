@@ -67,6 +67,13 @@ const rich = (value) => {
 
 const RENDERERS = {};   // populated below; also doubles as the set of known sections
 
+// Must stay in step with the [data-palette] / [data-type] blocks in style.css.
+const PALETTES = ['ink', 'paper', 'sage'];
+// Ground colour per palette, used for <meta name="theme-color"> when meta.themeColor
+// is unset, so the browser chrome matches whichever palette is active.
+const PALETTE_BG = { ink: '#fdfdfc', paper: '#fdfcf8', sage: '#fbfbf9' };
+const TYPES = ['serif', 'hybrid', 'sans'];
+
 async function exists(path) {
   try { await stat(path); return true; } catch { return false; }
 }
@@ -79,6 +86,10 @@ async function validate(data) {
   req(data.meta?.title, 'meta.title is required');
   req(data.meta?.description, 'meta.description is required');
   req(Array.isArray(data.sections) && data.sections.length, 'sections must be a non-empty array');
+
+  const { palette = 'ink', type = 'serif' } = data.theme ?? {};
+  req(PALETTES.includes(palette), `theme.palette "${palette}" is unknown (choose: ${PALETTES.join(', ')})`);
+  req(TYPES.includes(type), `theme.type "${type}" is unknown (choose: ${TYPES.join(', ')})`);
 
   for (const key of data.sections ?? []) {
     req(RENDERERS[key], `sections lists "${key}", which has no renderer (known: ${Object.keys(RENDERERS).join(', ')})`);
@@ -126,9 +137,12 @@ async function validate(data) {
 
 const LABELS = { about: 'About', experience: 'Experience', projects: 'Projects', writing: 'Writing' };
 
-const section = (id, body) => `
+/** content.labels can rename any section — e.g. "writing": "Publications". */
+const label = (id, data) => esc(data.labels?.[id] ?? LABELS[id] ?? id);
+
+const section = (id, body, data) => `
       <section class="section" id="${id}" aria-labelledby="${id}-heading">
-        <h2 class="section__heading" id="${id}-heading">${esc(LABELS[id] ?? id)}</h2>
+        <h2 class="section__heading" id="${id}-heading">${label(id, data)}</h2>
 ${body}
       </section>`;
 
@@ -138,7 +152,7 @@ const tags = (list) =>
 
 RENDERERS.about = (data) => section('about', `        <div class="prose">
 ${data.about.body.map((p) => `          <p>${rich(p)}</p>`).join('\n')}
-        </div>`);
+        </div>`, data);
 
 RENDERERS.experience = (data) => {
   const entries = data.experience.map((job) => {
@@ -165,7 +179,7 @@ RENDERERS.experience = (data) => {
 
   return section('experience', `        <ol class="entries">
 ${entries}
-        </ol>${resume}`);
+        </ol>${resume}`, data);
 };
 
 RENDERERS.projects = (data) => {
@@ -196,7 +210,7 @@ RENDERERS.projects = (data) => {
 
   return section('projects', `        <ol class="entries">
 ${entries}
-        </ol>`);
+        </ol>`, data);
 };
 
 RENDERERS.writing = (data) => {
@@ -218,7 +232,7 @@ RENDERERS.writing = (data) => {
 
   return section('writing', `        <ol class="entries entries--compact">
 ${entries}
-        </ol>`);
+        </ol>`, data);
 };
 
 /* ------------------------------------------------------------------ *
@@ -232,7 +246,7 @@ const ICONS = {
   codepen: '<polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/><line x1="12" y1="22" x2="12" y2="15.5"/><polyline points="22 8.5 12 15.5 2 8.5"/><polyline points="2 15.5 12 8.5 22 15.5"/><line x1="12" y1="2" x2="12" y2="8.5"/>',
 };
 
-const renderHead = (meta) => {
+const renderHead = (meta, palette) => {
   const jsonLd = JSON.stringify({
     '@context': 'https://schema.org',
     '@type': 'Person',
@@ -247,7 +261,7 @@ const renderHead = (meta) => {
 
   return `  <title>${esc(meta.name)} — ${esc(meta.title)}</title>
   <meta name="description" content="${esc(meta.description)}">
-  <meta name="theme-color" content="${esc(meta.themeColor ?? '#0f172a')}">
+  <meta name="theme-color" content="${esc(meta.themeColor ?? PALETTE_BG[palette] ?? '#ffffff')}">
   <meta property="og:type" content="profile">
   <meta property="og:title" content="${esc(meta.name)} — ${esc(meta.title)}">
   <meta property="og:description" content="${esc(meta.description)}">${image}${meta.url ? `
@@ -260,9 +274,9 @@ const renderHero = (meta) => `        <h1 class="name"><a href="./">${esc(meta.n
         <p class="role">${esc(meta.title)}</p>
         <p class="tagline">${esc(meta.tagline)}</p>`;
 
-const renderNav = (sections) => `        <nav class="nav" aria-label="Sections">
+const renderNav = (sections, data) => `        <nav class="nav" aria-label="Sections">
           <ul class="nav__list">
-${sections.map((id, i) => `            <li><a class="nav__link" href="#${id}"${i === 0 ? ' aria-current="true"' : ''}><span class="nav__line"></span><span class="nav__label">${esc(LABELS[id] ?? id)}</span></a></li>`).join('\n')}
+${sections.map((id, i) => `            <li><a class="nav__link" href="#${id}"${i === 0 ? ' aria-current="true"' : ''}><span class="nav__line"></span><span class="nav__label">${label(id, data)}</span></a></li>`).join('\n')}
           </ul>
         </nav>`;
 
@@ -300,11 +314,14 @@ async function build() {
 
   const main = data.sections.map((id) => RENDERERS[id](data)).join('\n') + renderFooter(data.footer);
 
+  const { palette = 'ink', type = 'serif' } = data.theme ?? {};
+
   let html = await readFile(join(SRC, 'index.html'), 'utf8');
   html = html
-    .replace('<!--@head-->', renderHead(data.meta))
+    .replace(/<html[^>]*>/, `<html lang="${esc(data.meta.lang ?? 'en')}" data-palette="${esc(palette)}" data-type="${esc(type)}">`)
+    .replace('<!--@head-->', renderHead(data.meta, palette))
     .replace('<!--@hero-->', renderHero(data.meta))
-    .replace('<!--@nav-->', renderNav(data.sections))
+    .replace('<!--@nav-->', renderNav(data.sections, data))
     .replace('<!--@socials-->', renderSocials(data.socials))
     .replace('<!--@main-->', main);
 
